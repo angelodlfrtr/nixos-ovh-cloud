@@ -2,6 +2,13 @@
 
 NixOS base image for OVH Public Cloud (OpenStack), built from a flake.
 
+## Download
+
+Prebuilt images are attached to the
+[releases](https://github.com/angelodlfrtr/nixos-ovh-cloud/releases), with a
+`SHA256SUMS` file and the `flake.lock` they were built from. Skip to
+[Upload to OVH](#upload-to-ovh) and use the downloaded file.
+
 ## Build
 
 ```sh
@@ -73,6 +80,16 @@ Cloud-init is not used; this is the upstream nixpkgs OpenStack setup
 - `modules/image.nix` – qcow2 builder, `system.build.ovhImage` (`nixosModules.image`)
 - `configuration.nix` – contents of the base image
 - `tests/boot.nix` – VM boot test (`checks.x86_64-linux.boot`)
+
+## Releasing
+
+Tags are `v<nixos release>.<YYYYMMDD>`. CI runs the boot test, then builds the
+image and publishes a GitHub release; a tag that does not match the flake's
+NixOS release is rejected.
+
+```sh
+git tag v26.05.$(date +%Y%m%d) && git push origin --tags
+```
 
 ## Managing a deployed instance
 

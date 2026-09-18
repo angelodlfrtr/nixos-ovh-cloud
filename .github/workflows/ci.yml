@@ -1,0 +1,49 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    # v<nixos release>.<YYYYMMDD>, e.g. v26.05.20260918
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          extra_nix_config: "system-features = nixos-test benchmark big-parallel kvm"
+      - run: nix flake check -L
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    # Never publish an image that failed the boot test.
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          extra_nix_config: "system-features = nixos-test benchmark big-parallel kvm"
+      - name: Check tag matches the NixOS release
+        run: |
+          release=$(nix eval --raw .#nixosConfigurations.ovh-base.config.system.nixos.release)
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v${release//./\\.}\.[0-9]{8}$ ]]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match v${release}.<YYYYMMDD>"
+            exit 1
+          fi
+      - name: Build image
+        run: |
+          nix build .#image -L
+          cp result/*.qcow2 "nixos-ovh-${GITHUB_REF_NAME#v}-x86_64.qcow2"
+          sha256sum ./*.qcow2 > SHA256SUMS
+      - name: Publish release
+        run: gh release create "$GITHUB_REF_NAME" ./*.qcow2 SHA256SUMS flake.lock --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
