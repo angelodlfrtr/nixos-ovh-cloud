@@ -31,6 +31,12 @@
         default = image;
       };
 
+      checks.${system}.boot = import ./tests/boot.nix {
+        inherit nixpkgs;
+        pkgs = nixpkgs.legacyPackages.${system};
+        baseSystem = self.nixosConfigurations.ovh-base;
+      };
+
       formatter.${system} = nixpkgs.legacyPackages.${system}.nixfmt-tree;
     };
 }

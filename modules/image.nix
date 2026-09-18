@@ -15,7 +15,8 @@
   system.build.ovhImage = import "${modulesPath}/../lib/make-disk-image.nix" {
     inherit lib config pkgs;
     inherit (config.image) baseName;
-    format = "qcow2";
+    # Compressed: ~3x smaller upload, Glance/Nova read it transparently.
+    format = "qcow2-compressed";
     # BIOS boot, matching `openstack.efi = false` (OVH default firmware).
     partitionTableType = "legacy";
     # The root partition is grown to the flavor's disk size on first boot.

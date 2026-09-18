@@ -10,6 +10,14 @@
   # configuration.nix) does not apply to a flake-built system without channels.
   virtualisation.amazon-init.enable = lib.mkDefault true;
 
+  # Serial port as primary console (last `console=` wins), like other cloud
+  # images: boot output shows up in `openstack console log show`. tty1 (set
+  # upstream) still gets a login prompt in the VNC console.
+  boot.kernelParams = lib.mkAfter [ "console=ttyS0,115200" ];
+
+  # Key-only SSH (upstream already disables PasswordAuthentication).
+  services.openssh.settings.KbdInteractiveAuthentication = lib.mkDefault false;
+
   services.qemuGuest.enable = lib.mkDefault true;
 
   # Public interface is configured by DHCP on Ext-Net.

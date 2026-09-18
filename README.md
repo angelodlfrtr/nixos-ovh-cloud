@@ -10,6 +10,22 @@ ls result/*.qcow2
 ```
 
 Requires KVM on the build host (the image is assembled inside a QEMU VM).
+On a non-NixOS host, if Nix complains that a system "with features {kvm} is
+required", add `system-features = nixos-test benchmark big-parallel kvm` to
+`/etc/nix/nix.conf` and restart the Nix daemon.
+
+The qcow2 is compressed (~650 MB).
+
+## Test
+
+```sh
+nix flake check -L
+```
+
+Boots the real qcow2 in QEMU against a fake OpenStack metadata service
+(`tests/boot.nix`) and checks: hostname and root SSH key from metadata,
+key-only SSH, `#!` user-data execution, root filesystem growth, no failed
+units, and a reboot. Takes well under a minute once the image is built.
 
 ## Upload to OVH
 
@@ -45,6 +61,9 @@ ssh root@<ip>
   (`169.254.169.254`); the key is added to `root`'s `authorized_keys`.
 - User-data starting with `#!` is executed as a script (once per boot).
 
+Boot output goes to the serial port, so `openstack console log show <server>`
+is the first place to look if an instance is unreachable.
+
 Cloud-init is not used; this is the upstream nixpkgs OpenStack setup
 (`virtualisation/openstack-config.nix`).
 
@@ -53,6 +72,7 @@ Cloud-init is not used; this is the upstream nixpkgs OpenStack setup
 - `modules/ovh.nix` – runtime config for an OVH instance (`nixosModules.ovh`)
 - `modules/image.nix` – qcow2 builder, `system.build.ovhImage` (`nixosModules.image`)
 - `configuration.nix` – contents of the base image
+- `tests/boot.nix` – VM boot test (`checks.x86_64-linux.boot`)
 
 ## Managing a deployed instance
 
