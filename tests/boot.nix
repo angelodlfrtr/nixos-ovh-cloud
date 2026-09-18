@@ -36,14 +36,16 @@ makeEc2Test {
         assert machine.succeed("hostname").strip() == "ovh-test"
 
     with subtest("metadata SSH key is authorized for root, and only that key"):
+        # `ssh -n`: stdin here is the test driver's control channel; letting
+        # ssh touch it intermittently hangs the driver.
         machine.succeed("mkdir -p ~/.ssh")
         machine.succeed(
             "ssh-keyscan -t ed25519 localhost 2>/dev/null > ~/.ssh/known_hosts"
         )
-        machine.fail("ssh -o BatchMode=yes localhost exit")
+        machine.fail("ssh -n -o BatchMode=yes localhost exit")
         machine.copy_from_host_via_shell("${privateKey}", "~/.ssh/id_ed25519")
         machine.succeed("chmod 600 ~/.ssh/id_ed25519")
-        machine.succeed("ssh -o BatchMode=yes localhost exit")
+        machine.succeed("ssh -n -o BatchMode=yes localhost exit")
 
     with subtest("password authentication is disabled"):
         machine.succeed("grep -qx 'PasswordAuthentication no' /etc/ssh/sshd_config")
