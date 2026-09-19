@@ -68,6 +68,11 @@ ssh root@<ip>
   (`169.254.169.254`); the key is added to `root`'s `authorized_keys`.
 - User-data starting with `#!` is executed as a script (once per boot).
 
+The metadata fetch runs at every boot and sshd waits for it. It is capped at
+60 seconds (`systemd.services.openstack-init.serviceConfig.TimeoutStartSec`),
+so an unresponsive metadata service delays sshd instead of preventing it from
+starting; the instance then keeps the key and hostname of the previous boot.
+
 Boot output goes to the serial port, so `openstack console log show <server>`
 is the first place to look if an instance is unreachable.
 
