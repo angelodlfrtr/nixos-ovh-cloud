@@ -65,6 +65,22 @@ makeEc2Test {
         failed = machine.succeed("systemctl --failed --no-legend").strip()
         assert failed == "", failed
 
+    with subtest("a metadata service that never answers does not fail the unit"):
+        # DROP, not REJECT: the connection hangs instead of failing, which is
+        # what OVH's metadata service does in practice and what the wget
+        # timeouts of modules/ovh.nix are for. Without them the unit runs
+        # into TimeoutStartSec, is killed, and takes sshd with it.
+        machine.succeed("iptables -I OUTPUT -d 169.254.169.254 -p tcp -j DROP")
+        try:
+            elapsed = int(machine.succeed(
+                "s=$(date +%s); systemctl restart openstack-init.service;"
+                " echo $(( $(date +%s) - s ))"
+            ).strip())
+        finally:
+            machine.succeed("iptables -D OUTPUT -d 169.254.169.254 -p tcp -j DROP")
+        assert elapsed < 55, f"the metadata fetch took {elapsed}s, close to TimeoutStartSec"
+        machine.succeed("systemctl is-active openstack-init.service")
+
     with subtest("survives a reboot"):
         machine.shutdown()
         machine.start()

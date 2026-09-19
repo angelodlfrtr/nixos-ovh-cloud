@@ -68,10 +68,15 @@ ssh root@<ip>
   (`169.254.169.254`); the key is added to `root`'s `authorized_keys`.
 - User-data starting with `#!` is executed as a script (once per boot).
 
-The metadata fetch runs at every boot and sshd waits for it. It is capped at
-60 seconds (`systemd.services.openstack-init.serviceConfig.TimeoutStartSec`),
-so an unresponsive metadata service delays sshd instead of preventing it from
-starting; the instance then keeps the key and hostname of the previous boot.
+The metadata fetch runs at every boot and sshd waits for it. OVH's metadata
+service sometimes accepts the connection and never answers, and upstream runs
+`wget` without a timeout, so the fetch hangs and takes sshd with it. Each
+`wget` is therefore bounded (`--timeout=5 --tries=2` in `modules/ovh.nix`,
+against about 1.5 seconds for a whole run when the service answers), with
+`TimeoutStartSec = 60` left as a backstop. An unresponsive metadata service
+then costs a few seconds of boot instead of sshd, `openstack-init` still ends
+successfully, and the instance keeps the key and hostname of the previous
+boot.
 
 Boot output goes to the serial port, so `openstack console log show <server>`
 is the first place to look if an instance is unreachable.
